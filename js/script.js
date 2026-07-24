@@ -75,26 +75,66 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Contact Form Submission Handling
+  // Contact Form Submission Handling via Web3Forms API
   const contactForm = document.getElementById('contactForm');
   if (contactForm) {
-    contactForm.addEventListener('submit', (e) => {
+    contactForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       const nameInput = document.getElementById('name').value.trim();
       const emailInput = document.getElementById('email').value.trim();
-      const subjectInput = document.getElementById('subject').value.trim();
+      const subjectInput = document.getElementById('subject').value.trim() || 'Portfolio Inquiry';
       const messageInput = document.getElementById('message').value.trim();
 
       if (!nameInput || !emailInput || !messageInput) {
-        showToast('⚠️ Please complete all required fields.', 'warning');
+        showToast('⚠️ Please complete all required fields.');
         return;
       }
 
-      // Simulate successful form sending
-      showToast('🚀 Message sent successfully! Karthikeyan will get back to you soon.');
-      contactForm.reset();
+      const submitBtn = contactForm.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+      submitBtn.disabled = true;
+
+      const formData = new FormData(contactForm);
+      const web3key = document.getElementById('web3formsKey');
+
+      if (web3key && web3key.value && web3key.value !== 'YOUR_WEB3FORMS_ACCESS_KEY') {
+        try {
+          const response = await fetch('https://api.web3forms.com/submit', {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            showToast('🚀 Message sent directly to Karthikeyan\'s inbox!');
+            contactForm.reset();
+          } else {
+            showToast('⚠️ Could not send message. Opening email client...');
+            openMailClient(emailInput, subjectInput, messageInput, nameInput);
+          }
+        } catch (error) {
+          showToast('⚠️ Network error. Opening email client...');
+          openMailClient(emailInput, subjectInput, messageInput, nameInput);
+        } finally {
+          submitBtn.innerHTML = originalBtnText;
+          submitBtn.disabled = false;
+        }
+      } else {
+        // Direct mailto fallback if free Web3Forms key is not added yet
+        showToast('✉️ Opening email client to send message...');
+        openMailClient(emailInput, subjectInput, messageInput, nameInput);
+        submitBtn.innerHTML = originalBtnText;
+        submitBtn.disabled = false;
+        contactForm.reset();
+      }
     });
+  }
+
+  function openMailClient(userEmail, subject, message, userName) {
+    const mailtoUrl = `mailto:karthikeyanrsd007@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${userName} (${userEmail})\n\n${message}`)}`;
+    window.location.href = mailtoUrl;
   }
 
   // Helper Toast Notification
